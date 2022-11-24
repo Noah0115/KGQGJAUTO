@@ -40,7 +40,7 @@ allAuto()：包含了全部的功能模块
 
 change	可以自定义账号
 
-**另:**建议使用weditor去测试各个模块中点击函数的坐标值
+**另外：**建议使用weditor去测试各个模块中点击函数的坐标值
 
 ​	参考文章：https://blog.csdn.net/qq_43540385/article/details/127243814
 
