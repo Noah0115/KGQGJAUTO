@@ -1,0 +1,201 @@
+# -*- coding: UTF-8 -*-
+"""
+Tencent is pleased to support the open source community by making GAutomator available.
+Copyright (C) 2016 THL A29 Limited, a Tencent company. All rights reserved.
+Licensed under the MIT License (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
+http://opensource.org/licenses/MIT
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+
+"""
+
+import time
+import os
+import logging
+from ga2.cloud.httptools.remoteConnection import RemoteConnection, Method
+from ga2.common.wetestExceptions import WeTestPlatormError, WeTestInvaildArg
+
+logger = logging.getLogger(__name__)
+
+
+class Command(object):
+    TOUCH_CAPTURE = (Method.POST, "touchcapture")
+    CAPTURE = (Method.POST, "snapshot")
+    # GET_SCREEN_IMAGE = (Method.GET, "screenimage")
+    FORWARD = (Method.POST, "forward")
+    RESTORE_WDA = (Method.POST, "restorewda")
+    LAUNCH_APP = (Method.POST, "launchapp")
+    GET_ROTATION = (Method.GET, "rotation")
+    CLEAR_APP_DATA = (Method.POST, "clearappdata")
+    CURRENT_PACKAGE_NAME = (Method.GET, "currentpackagename")
+    RESOLUTION = (Method.GET, "resolution")
+    STOP_UIAUTOMATOR = (Method.GET, "pauseuiautomator")
+    START_UIAUTOMATOR = (Method.GET, "resumeuiautomator")
+    TOUCH = (Method.POST, "touch")
+    GET_TEST_TIME = (Method.GET, "runtime")
+    # SCENE_TAG = (Method.POST, "scenetag")
+    REPORT_SCENE = (Method.POST, "scenereport")
+    ANDROIDVERSION = (Method.GET, "androidversion")
+    MODEL = (Method.GET, "model")
+    REPORT_ERROR = (Method.POST, "reporterror")
+    PROCDIED_REPORT = (Method.POST, "procdiedreport")
+    SCENE_CAPTURE_TAG = (Method.POST, "scene_capture_tag")
+
+
+class Executor(object):
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port
+        self.url = "http://{0}:{1}".format(host, port)
+        # self.platform_client = RemoteConnection(url, keep_alive=True)
+
+    def _check_response(self, response):
+        """
+            errorcode==0 means success
+            :param response:
+            :return the data in response:
+        """
+        if not response:
+            raise WeTestPlatormError("None response")
+
+        if isinstance(response, bool):
+            return response
+
+        if not isinstance(response, dict):
+            invaild_response = "Invaild response : {0}".format(response)
+            raise WeTestPlatormError(invaild_response)
+
+        error_code = response.get("result", 0)
+        if error_code == 0:
+            return response.get("data", True)  # 如果没有数据，还是会返回，只是不再会有data数据
+        else:
+            errorMessage = response.get("errorMsg", "platorm api error")
+            raise WeTestPlatormError(errorMessage)
+
+    def excute_platform(self, command, params=None):
+        """
+        :param command:
+        :param params:
+        :return if errorcode is 0, return the data or True if data is None :
+        """
+        platform_client = RemoteConnection(self.url, keep_alive=False)
+        start_time = time.time()
+        if not isinstance(command, tuple):
+            raise WeTestInvaildArg("command is invaild")
+
+        if command[0] == Method.GET:
+            response = platform_client.get(command[1], params)
+        else:
+            response = platform_client.post(command[1], params)
+        end_time = time.time()
+
+        if response and isinstance(response, dict) and "data" in response:
+            if "imageData" in response["data"]:
+                response = self._check_response(response)
+                return response
+        logger.debug("Command: {0} Response: {1} time: {2}s".format(command, response, (end_time - start_time)))
+        response = self._check_response(response)
+        return response
+
+    # def take_screenshot(self):
+    #     return self.excute_platform(Command.CAPTURE)
+
+    def restore_wda(self, port):
+        return self.excute_platform(Command.RESTORE_WDA, {"port": port})
+
+    # def touch_capture(self, width, height, x, y, name="wetest"):
+    #     return self.excute_platform(Command.TOUCH_CAPTURE,
+    #                                 {"name": name, "width": width,
+    #                                  "height": height, "x": x, "y": y})
+
+    # def get_screenimage(self):
+    #     return self.excute_platform(Command.GET_SCREEN_IMAGE)
+
+    def platform_forward(self, remote_port):
+        return self.excute_platform(Command.FORWARD, {"remotePort": remote_port})
+
+    def get_top_package_activity(self):
+        return self.excute_platform(Command.CURRENT_PACKAGE_NAME)
+
+    def get_display_size(self):
+        return self.excute_platform(Command.RESOLUTION)
+
+    def get_android_version(self):
+        return self.excute_platform(Command.ANDROIDVERSION)
+
+    def get_android_model(self):
+        return self.excute_platform(Command.MODEL)
+
+    def get_rotation(self):
+        return self.excute_platform(Command.GET_ROTATION)
+
+    def clear_app_data(self, pkgname):
+        return self.excute_platform(Command.CLEAR_APP_DATA, {"clearPkgName": pkgname})
+
+    def launch_app(self, pkgname, activity="android.intent.category.LAUNCHER"):
+        return self.excute_platform(Command.LAUNCH_APP, {"pkgName": pkgname, "activity": activity})
+
+    def take_screenshot(self, sceneid=""):
+        (testid, deviceid) = self.__getTestDeviceId()
+        params = { "sceneid":sceneid}
+        if testid > 0 and deviceid > 0 :
+            params["testid"] = testid
+            params["deviceid"] = deviceid
+        return self.excute_platform(Command.CAPTURE,params)
+
+    def __getTestDeviceId(self):
+        testid, deviceid = 0, 0
+        if ("TESTID" in os.environ):
+            testid = int(os.environ.get("TESTID"))
+        if ("DEVICEID" in os.environ):
+            deviceid = int(os.environ.get("DEVICEID"))
+        return (testid,deviceid)
+
+    # def add_scene_tag(self, tag):
+    #     return self.excute_platform(Command.SCENE_TAG, {"tagName": tag})
+    def touch_capture(self, width, height, x, y, name="wetest" , sceneid=""):
+        (testid, deviceid) = self.__getTestDeviceId()
+        params = {"name": name, "width": width,"height": height, "x": x, "y": y, "sceneid": sceneid}
+        if testid > 0 and deviceid > 0 :
+            params["testid"] = testid
+            params["deviceid"] = deviceid
+        return self.excute_platform(Command.TOUCH_CAPTURE,params)
+
+
+    def scene_capture_tag(self, scenename="", timestamp=0, sceneorder=1, scenetype=1, sceneid=""):
+        (testid, deviceid) = self.__getTestDeviceId()
+        params = {"scenename": scenename, "timestamp": timestamp, "sceneid": sceneid,
+                  "sceneorder": sceneorder, "scenetype": scenetype}
+        if testid > 0 and deviceid > 0:
+            params["testid"] = testid
+            params["deviceid"] = deviceid
+        return self.excute_platform(Command.SCENE_CAPTURE_TAG, params)
+
+    def touch_screen(self, width, height, x, y):
+        return self.excute_platform(Command.TOUCH, {"width": width, "height": height, "x": x, "y": y})
+
+    def pause_uiautomator(self):
+        return self.excute_platform(Command.STOP_UIAUTOMATOR)
+
+    def resume_uiautomator(self):
+        return self.excute_platform(Command.START_UIAUTOMATOR)
+
+    def get_runtime(self):
+        return self.excute_platform(Command.GET_TEST_TIME)
+
+    def report_error(self, message):
+        return self.excute_platform(Command.REPORT_ERROR, {"errmsg": message})
+
+    def procdied_report(self, is_need_report):
+        return self.excute_platform(Command.PROCDIED_REPORT, {"isNeedReport": is_need_report})
+
+
+def get_platform_client():
+    if get_platform_client.instance:
+        return get_platform_client.instance
+    platform_ip = os.environ.get("PLATFORM_IP", "127.0.0.1")
+    platform_port = os.environ.get("PLATFORM_PORT", "40030")
+    get_platform_client.instance = Executor(platform_ip, platform_port)
+    return get_platform_client.instance
+
+
+get_platform_client.instance = None
