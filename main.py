@@ -23,7 +23,6 @@ d = u2.connect('127.0.0.1:62001')
 # d.click(0.5, 0.75)        # 确认
 
 
-
 def cvcheck(filename, uiname):
     # 读取货物图片
     template = cv.imread('./pictemplate/' + filename)
@@ -501,7 +500,7 @@ def yuanxing():
         print('战斗完成确认点击完成')
         time.sleep(3)
         print('活动积分检测确认')
-        confirm(yx1,yx2,dx3,dy3)
+        confirm(yx1, yx2, dx3, dy3)
         # d.click(0.498, 0.754)  # 活动积分确认 793, 678
         print('活动积分确认完成')
         time.sleep(1)
