@@ -23,6 +23,7 @@ d = u2.connect('127.0.0.1:62001')
 # d.click(0.5, 0.75)        # 确认
 
 
+
 def cvcheck(filename, uiname):
     # 读取货物图片
     template = cv.imread('./pictemplate/' + filename)
