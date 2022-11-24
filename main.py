@@ -777,13 +777,13 @@ def qitian():
     changeaccount1('nee0631')
 
 
-def nee0631():
+def nee():
     allAuto(1)
     changeaccount1('uye6153')
     time.sleep(15)
 
 
-def uye6153():
+def uye():
     allAuto(1)
     changeaccount1('是祁天不是齐天')
     time.sleep(10)
@@ -794,5 +794,5 @@ def uye6153():
 if __name__ == '__main__':
     d = u2.connect('127.0.0.1:62001')
     qitian()
-    nee0631()
-    uye6153()
+    nee()
+    uye()
